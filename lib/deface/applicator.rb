@@ -1,3 +1,5 @@
+# only a one-line difference here - added applicable_to_tenant? check
+
 module Deface
   module Applicator
     module ClassMethods
@@ -19,7 +21,7 @@ module Deface
           doc = Deface::Parser.convert(source)
 
           overrides.each do |override|
-            if override.disabled?
+            if override.disabled? || !override.applicable_to_tenant?
               Rails.logger.info("\e[1;32mDeface:\e[0m '#{override.name}' is disabled") if log
               next
             end

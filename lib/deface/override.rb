@@ -9,7 +9,7 @@ module Deface
     attr_accessor :args, :parsed_document
 
     @@_early = []
-    @@actions = [:remove, :replace, :replace_contents, :surround, :surround_contents, :insert_after, :insert_before, :insert_top, :insert_bottom, :set_attributes, :add_to_attributes, :remove_from_attributes]
+    @@actions = [:remove, :replace, :replace_contents, :surround, :surround_contents, :insert_after, :insert_before, :insert_top, :insert_bottom, :set_attributes, :add_to_attributes, :remove_from_attributes, :tenant_name]
     @@sources = [:text, :erb, :haml, :partial, :template, :cut, :copy]
 
     # Initializes new override, you must supply only one Target, Action & Source
@@ -128,8 +128,26 @@ module Deface
     def source
       erb = case source_argument
       when :partial
-        load_template_source(@args[:partial], true)
+        # which of these files, in this order or precedence, exists?
+
+        tenant_source = nil
+
+        if @args[:tenant_name].present?
+          tenantized_path = "#{@args[:tenant_name]}/overrides/#{@args[:partial]}"
+          begin
+            tenant_source = load_template_source(tenantized_path, true)
+          rescue ActionView::MissingTemplate
+            # intentionally ignoring as we expect this to happen when there's no tenant-specific partial
+          end
+        end
+
+        if tenant_source.nil?
+          load_template_source(@args[:partial], true)
+        else
+          tenant_source
+        end
       when :template
+        #TODO: Probably want to do the same there here like we did w/ partial above
         load_template_source(@args[:template], false)
       when :text
         @args[:text]
@@ -183,6 +201,14 @@ module Deface
 
     def source_element
       Deface::Parser.convert(source.clone)
+    end
+
+    def applicable_to_tenant?
+      if @args.key?(:tenant_name)
+        @args[:tenant_name] == Spree::Tenant.current_tenant.shortname ? true : false
+      else
+        true
+      end
     end
 
     def disabled?

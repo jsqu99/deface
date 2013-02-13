@@ -17,11 +17,14 @@ module Deface
         File.open(filename) do |file|
           context_name = File.basename(filename).gsub('.deface', '')
 
+          tenant_name = determine_tenant_name(filename)
+
           file_contents = file.read
 
           if context_name.end_with?('.html.erb')
             dsl_commands, the_rest = extract_dsl_commands_from_erb(file_contents)
 
+            dsl_commands = dsl_commands + "\ntenant_name '#{tenant_name}'" if tenant_name.present?
             context_name = context_name.gsub('.html.erb', '')
             context = Context.new(context_name)
             context.virtual_path(determine_virtual_path(filename))
@@ -30,6 +33,7 @@ module Deface
             context.create_override
           elsif context_name.end_with?('.html.haml')
             dsl_commands, the_rest = extract_dsl_commands_from_haml(file_contents)
+            dsl_commands = dsl_commands + "\ntenant_name '#{tenant_name}'" if tenant_name.present?
 
             context_name = context_name.gsub('.html.haml', '')
             context = Context.new(context_name)
@@ -38,6 +42,7 @@ module Deface
             context.haml(the_rest)
             context.create_override            
           else
+            file_contents = file_contents + "\ntenant_name '#{tenant_name}'" if tenant_name.present?
             context = Context.new(context_name)
             context.virtual_path(determine_virtual_path(filename))
             context.instance_eval(file_contents)
@@ -120,6 +125,19 @@ module Deface
         end
         result
       end
+
+      def self.determine_tenant_name(filename)
+        result = ''
+        pathname = Pathname.new(filename)
+        pathname.ascend do |parent|
+          if parent.basename.to_s == 'tenants'
+            result = pathname.sub(parent.to_s + '/', '').dirname.to_s.split('/').first
+            break
+          end
+        end
+        result
+      end
+
     end
   end
 end

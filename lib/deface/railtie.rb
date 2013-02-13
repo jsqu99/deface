@@ -3,7 +3,7 @@ module Deface
     # include rake tasks.
     #
     rake_tasks do
-      %w{utils precompile}.each { |r| load File.join([File.dirname(__FILE__) , "../../tasks/#{r}.rake"]) }
+      %w{utils}.each { |r| load File.join([File.dirname(__FILE__) , "../../tasks/#{r}.rake"]) }
     end
 
     def self.activate
